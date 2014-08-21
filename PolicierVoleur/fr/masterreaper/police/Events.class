@@ -1,0 +1,217 @@
+//Please don't mind my 'in test' code
+
+package fr.masterreaper.policier;
+
+
+import java.util.ArrayList;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Effect;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Score;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.ScoreboardManager;
+import org.bukkit.scoreboard.Team;
+
+
+
+public class Events implements Listener {
+
+    
+	ScoreboardManager manager = Bukkit.getScoreboardManager();
+	Scoreboard board = manager.getNewScoreboard();
+	Team team_policiers = board.registerNewTeam("Policiers");
+	Team team_voleurs = board.registerNewTeam("Voleurs");
+	
+	
+	 Location prison_loc;
+	
+	
+	
+	Objective objective = board.registerNewObjective("test", "dummy");
+	
+	
+
+
+	
+	
+	//HashMap<String, Integer, Integer, Integer> prison_location = new HashMap<String, Integer, Integer, Integer>();
+
+	    
+	@EventHandler
+	public void onPlayerChat(AsyncPlayerChatEvent e) {
+	  e.setFormat("%s §l§2⇨ §r§7%s");
+	}
+	
+	  @EventHandler(priority=EventPriority.NORMAL, ignoreCancelled=true)
+      public void onRightClick(PlayerInteractEntityEvent event) {
+        Player player = event.getPlayer();
+        Player clicked = (Player) event.getRightClicked();
+        if(player.getItemInHand().getType() == Material.STICK){    
+        if (team_policiers.hasPlayer(player) && team_voleurs.hasPlayer(clicked)) {
+            event.setCancelled(true);
+            clicked.teleport(prison_loc);
+            player.teleport(player.getLocation().add(0, -256, 0));
+            player.teleport(prison_loc);
+            player.getWorld().playSound(prison_loc, Sound.WITHER_DEATH, 500, 500);
+            player.getWorld().playSound(prison_loc, Sound.GHAST_SCREAM2, 500, 500);
+            player.getWorld().playSound(prison_loc, Sound.GHAST_SCREAM, 500, 500);
+            Bukkit.broadcastMessage(ChatColor.RED + "[JEU] " + ChatColor.BLUE + "Le voleur " + ChatColor.GREEN + clicked.getName() + ChatColor.BLUE + " à été envoyé en prison par le policier " + ChatColor.GREEN + player.getName());
+        }
+        }
+    }
+	
+	 
+	@EventHandler
+	public void onCommand(PlayerCommandPreprocessEvent e){
+		
+		ItemStack prisonportable = new ItemStack(Material.IRON_FENCE);
+		ItemMeta meta_prisonportable = prisonportable.getItemMeta();
+		meta_prisonportable.setDisplayName(ChatColor.GOLD + "Prison portable");
+		
+		ArrayList<String> lore_prison = new ArrayList<>();
+	    lore_prison.add(ChatColor.AQUA + "Vous pouvez poser cette prison partout !");
+	    meta_prisonportable.setLore(lore_prison);
+	    prisonportable.setItemMeta(meta_prisonportable);
+	    
+	    ItemStack stick = new ItemStack(Material.STICK);
+		ItemMeta meta_stick = stick.getItemMeta();
+		meta_stick.setDisplayName(ChatColor.GOLD + "Baton de policier !");
+		
+		ArrayList<String> lore_stick = new ArrayList<>();
+	    lore_stick.add(ChatColor.AQUA + "Abattez les voleur avec de baton !");
+	    meta_stick.setLore(lore_stick);
+	    stick.setItemMeta(meta_stick);
+		
+		Player player = e.getPlayer();
+		String message = e.getMessage();
+		String[] args = message.split(" ");
+		
+		if (args[0].equalsIgnoreCase("/policier")) {
+			e.setCancelled(true);
+			team_voleurs.removePlayer(player);
+			player.sendMessage(ChatColor.AQUA + "Vous êtes un policier");	
+			team_policiers.addPlayer(player);
+			team_policiers.setPrefix("§4");
+			objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+			objective.setDisplayName("Joueurs");
+			Score score = objective.getScore(player);
+			score.setScore(10);
+			player.setScoreboard(board);
+			player.setDisplayName(ChatColor.DARK_RED + "[Policier]" + ChatColor.RED + player.getName());
+			player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 2), true);
+			player.getInventory().clear();
+			player.setGameMode(GameMode.ADVENTURE);
+			player.getInventory().addItem(prisonportable);
+			player.getInventory().addItem(stick);
+			player.getInventory().setHelmet(new ItemStack(Material.REDSTONE_BLOCK, 1));
+			
+		}
+		if (args[0].equalsIgnoreCase("/voleur")) {
+			e.setCancelled(true);
+			team_policiers.removePlayer(player);
+			player.sendMessage(ChatColor.AQUA + "Vous êtes un voleur");	
+			team_voleurs.addPlayer(player);
+			team_voleurs.setPrefix("§1");
+			objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+			objective.setDisplayName("Joueurs");
+			Score score = objective.getScore(player);
+			score.setScore(10);
+			player.setScoreboard(board);
+			player.setDisplayName(ChatColor.DARK_BLUE + "[Voleur]" + ChatColor.BLUE + player.getName());
+			player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 4), true);
+			player.getInventory().clear();
+			player.setGameMode(GameMode.ADVENTURE);
+			
+		}
+		
+		if (args[0].equalsIgnoreCase("/setprison")) {
+			e.setCancelled(true);
+			prison_loc = player.getLocation();
+			
+			
+			player.sendMessage(ChatColor.RED + "[JEU] " + ChatColor.BLUE + "La prison à été placé à votre position");
+			
+		}
+		if (args[0].equalsIgnoreCase("/goprison")) {
+			e.setCancelled(true);
+			if(prison_loc == null){
+				player.sendMessage(ChatColor.RED + "[JEU] " + ChatColor.BLUE + "Pas de prison , faites " + ChatColor.GREEN + "/setprison");
+				
+			}
+			player.teleport(prison_loc);
+			
+			player.sendMessage(ChatColor.RED + "[JEU] " + ChatColor.BLUE + "Vous avez été téléporté à la prison");
+			
+		}
+		if (args[0].equalsIgnoreCase("/delprison")) {
+			e.setCancelled(true);
+			
+			
+			if(prison_loc == null){
+				
+				player.sendMessage(ChatColor.RED + "[JEU] " + ChatColor.BLUE + "Pas de prison à supprimé, faites " + ChatColor.GREEN + "/setprison" + ChatColor.BLUE + " pour en créer une");
+				
+			}else{
+				
+			
+			player.sendMessage(ChatColor.RED + "[JEU] " + ChatColor.BLUE + "La prison à été supprimé, pour la placer faites " + ChatColor.GREEN + "/setprison");
+			prison_loc = null;
+			}
+		}
+		if (args[0].equalsIgnoreCase("/timer")) {
+     
+		
+		}
+		
+		
+		
+		
+	}
+	@EventHandler
+	public void onPlace(BlockPlaceEvent e){
+		
+		Player player = e.getPlayer();
+		if(player.getItemInHand().getType() == Material.IRON_FENCE){
+			
+			prison_loc = e.getBlock().getLocation();
+			player.getWorld().playEffect(prison_loc, Effect.POTION_BREAK, 0, 500);
+			player.getWorld().playSound(prison_loc, Sound.ANVIL_LAND, 500, 500);
+			e.getBlock().setType(Material.AIR);
+			
+			
+		}
+		
+		
+		
+		
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+}
